@@ -1,4 +1,4 @@
-// pages/api/generate.js
+import { fetch } from 'undici';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -12,19 +12,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Import dynamic dependencies
-    import { fetch } from 'undici';
-
-
-    // Use your API keys here
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     const UNSPLASH_API_KEY = process.env.UNSPLASH_API_KEY;
 
     if (!OPENAI_API_KEY || !UNSPLASH_API_KEY) {
-      return res.status(500).json({ error: 'Missing API keys in environment variables' });
+      return res.status(500).json({ error: 'Missing API keys' });
     }
 
-    // 🔹 1. Generate article from OpenAI
+    // 🔹 OpenAI call to generate magazine-style article
     const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -36,7 +31,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: 'You are a magazine writer. Generate a well-structured, engaging, visually descriptive article suitable for a magazine format.',
+            content: 'You are a professional magazine writer. Write a detailed, engaging, visually descriptive article suitable for a digital magazine.',
           },
           {
             role: 'user',
@@ -50,29 +45,26 @@ export default async function handler(req, res) {
 
     const gptData = await gptRes.json();
 
-    if (!gptData.choices || gptData.choices.length === 0) {
-      throw new Error('Invalid GPT response');
-    }
+    const article = gptData.choices?.[0]?.message?.content || 'No article generated.';
 
-    const article = gptData.choices[0].message.content;
-
-    // 🔹 2. Get 3 Unsplash images
-    const unsplashRes = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3`, {
-      headers: {
-        Authorization: `Client-ID ${UNSPLASH_API_KEY}`,
-      },
-    });
+    // 🔹 Unsplash call to get 3 images
+    const unsplashRes = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3`,
+      {
+        headers: {
+          Authorization: `Client-ID ${UNSPLASH_API_KEY}`,
+        },
+      }
+    );
 
     const unsplashData = await unsplashRes.json();
 
-    const images = unsplashData.results.map(img => img.urls.regular);
+    const images = unsplashData.results?.map((img) => img.urls.regular) || [];
 
-    return res.status(200).json({
-      article,
-      images,
-    });
+    return res.status(200).json({ article, images });
+
   } catch (err) {
-    console.error('🔥 Error in /api/generate:', err);
+    console.error('🔥 /api/generate error:', err);
     return res.status(500).json({ error: 'Failed to generate magazine' });
   }
 }
