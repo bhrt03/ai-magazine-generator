@@ -13,7 +13,8 @@ export default async function handler(req, res) {
 
   try {
     // Import dynamic dependencies
-    const fetch = (await import('node-fetch')).default;
+    import { fetch } from 'undici';
+
 
     // Use your API keys here
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
