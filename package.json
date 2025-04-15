@@ -7,7 +7,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "node-fetch": "^2.6.9",
+    "node-fetch": "^3.3.2",
     "axios": "^1.4.0",
     "html2pdf.js": "^0.10.1",
     "next": "13.4.10",
