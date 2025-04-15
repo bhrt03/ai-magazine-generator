@@ -7,8 +7,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "undici": "^5.26.2",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^2.6.9",
     "axios": "^1.4.0",
     "html2pdf.js": "^0.10.1",
     "next": "13.4.10",
