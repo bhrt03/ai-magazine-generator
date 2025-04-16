@@ -1,7 +1,5 @@
 // pages/api/generate.js
 
-import fetch from 'node-fetch';
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -10,7 +8,7 @@ export default async function handler(req, res) {
   const { topic } = req.body;
 
   if (!topic) {
-    return res.status(400).json({ error: 'Topic is required' });
+    return res.status(400).json({ error: 'Missing topic in request body' });
   }
 
   try {
@@ -23,27 +21,37 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
         messages: [
-          { role: 'system', content: 'You are a professional magazine writer creating beautiful long-form content with sections and headers.' },
-          { role: 'user', content: `Write a rich, multi-paragraph magazine article about: ${topic}. Include facts, subheadings, and compelling narrative.` }
+          {
+            role: 'system',
+            content: 'You are a professional magazine writer creating beautiful long-form content with sections and headers.'
+          },
+          {
+            role: 'user',
+            content: `Write a rich, multi-paragraph magazine article about: "${topic}". Include facts, subheadings, and compelling narrative.`
+          }
         ],
         temperature: 0.7,
         max_tokens: 2000
       })
     });
 
-    const data = await response.json();
+    // Debug logs
+    const text = await response.text();
+    console.log('🧾 OpenAI raw response:', text);
 
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("OpenAI returned incomplete response:", data);
-      return res.status(500).json({ error: 'Failed to generate article' });
+    // Attempt to parse
+    const result = JSON.parse(text);
+
+    const content = result.choices?.[0]?.message?.content;
+
+    if (!content) {
+      return res.status(500).json({ error: 'No content returned from OpenAI' });
     }
 
-    const article = data.choices[0].message.content.trim();
+    return res.status(200).json({ content });
 
-    res.status(200).json({ article });
-
-  } catch (error) {
-    console.error('Error calling OpenAI:', error);
-    res.status(500).json({ error: 'Failed to generate article' });
+  } catch (err) {
+    console.error('❌ Error generating article:', err);
+    return res.status(500).json({ error: 'Failed to generate article' });
   }
 }
