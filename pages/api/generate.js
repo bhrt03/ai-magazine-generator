@@ -1,3 +1,5 @@
+// pages/api/generate.js
+
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -5,42 +7,43 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { query } = req.body;
-  if (!query) {
-    return res.status(400).json({ error: 'Missing topic' });
+  const { topic } = req.body;
+
+  if (!topic) {
+    return res.status(400).json({ error: 'Topic is required' });
   }
 
   try {
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
         messages: [
-          {
-            role: 'user',
-            content: `Write a long, magazine-style article on the topic: "${query}". Make it engaging and informative.`,
-          },
+          { role: 'system', content: 'You are a professional magazine writer creating beautiful long-form content with sections and headers.' },
+          { role: 'user', content: `Write a rich, multi-paragraph magazine article about: ${topic}. Include facts, subheadings, and compelling narrative.` }
         ],
-        max_tokens: 1200,
-      }),
+        temperature: 0.7,
+        max_tokens: 2000
+      })
     });
 
-    const openaiData = await openaiRes.json();
-    const article = openaiData.choices?.[0]?.message?.content || 'Failed to generate article.';
+    const data = await response.json();
 
-    const unsplashRes = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&client_id=${process.env.UNSPLASH_API_KEY}`
-    );
-    const unsplashData = await unsplashRes.json();
-    const images = unsplashData.results?.map((img) => img.urls.regular) || [];
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error("OpenAI returned incomplete response:", data);
+      return res.status(500).json({ error: 'Failed to generate article' });
+    }
 
-    res.status(200).json({ article, images });
+    const article = data.choices[0].message.content.trim();
+
+    res.status(200).json({ article });
+
   } catch (error) {
-    console.error('Generation error:', error);
-    res.status(500).json({ error: 'Failed to generate magazine' });
+    console.error('Error calling OpenAI:', error);
+    res.status(500).json({ error: 'Failed to generate article' });
   }
 }
