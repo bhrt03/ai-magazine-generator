@@ -1,22 +1,18 @@
 {
   "name": "ai-magazine-generator",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
-    "node-fetch": "^3.3.2",
-    "axios": "^1.4.0",
-    "html2pdf.js": "^0.10.1",
-    "next": "13.4.10",
+    "ai": "^2.2.0",
+    "axios": "^1.7.2",
+    "jspdf": "^2.5.1",
+    "next": "14.2.3",
     "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "tailwindcss": "^3.3.2"
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.21"
+    "react-dom": "18.2.0"
   }
 }
