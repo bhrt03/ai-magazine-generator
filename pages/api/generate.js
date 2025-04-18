@@ -35,13 +35,8 @@ export default async function handler(req, res) {
     });
 
     const openaiText = await openaiResponse.text();
-    console.log('🧾 OpenAI raw response:', openaiText);
-
     if (!openaiResponse.ok) {
-      return res.status(500).json({
-        error: 'OpenAI API failed',
-        details: openaiText,
-      });
+      return res.status(500).json({ error: 'OpenAI API failed', details: openaiText });
     }
 
     const openaiResult = JSON.parse(openaiText);
@@ -51,33 +46,34 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'OpenAI response did not contain content.' });
     }
 
-    // 2. Fetch 3 related images from Unsplash
-    const unsplashResponse = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(topic)}&per_page=3&client_id=${process.env.UNSPLASH_ACCESS_KEY}`
-    );
+    // 2. Get images from Pexels
+    const pexelsResponse = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(topic)}&per_page=3`, {
+      headers: {
+        Authorization: process.env.PEXELS_API_KEY,
+      },
+    });
 
-    const unsplashText = await unsplashResponse.text();
-    console.log('🖼️ Unsplash raw response:', unsplashText);
+    const pexelsText = await pexelsResponse.text();
+    let images = [];
 
-    if (!unsplashResponse.ok) {
-      return res.status(500).json({
-        error: 'Unsplash API failed',
-        details: unsplashText,
-      });
+    if (pexelsResponse.ok) {
+      const pexelsData = JSON.parse(pexelsText);
+      images = pexelsData.photos?.map(photo => photo.src?.large).filter(Boolean);
     }
 
-    const unsplashData = JSON.parse(unsplashText);
-    const images = unsplashData.results?.map(img => img.urls?.regular).filter(Boolean);
-
+    // Fallback if no images
     if (!images || images.length === 0) {
-      return res.status(500).json({ error: 'No images found from Unsplash.' });
+      images = [
+        'https://via.placeholder.com/800x600?text=Sample+Image+1',
+        'https://via.placeholder.com/800x600?text=Sample+Image+2',
+        'https://via.placeholder.com/800x600?text=Sample+Image+3'
+      ];
     }
 
-    // ✅ Final response
     return res.status(200).json({ content, images });
 
   } catch (err) {
-    console.error('🔥 Server Error:', err);
+    console.error('❌ Server error:', err);
     return res.status(500).json({ error: 'Server error occurred while generating content.' });
   }
 }
