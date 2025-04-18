@@ -21,8 +21,7 @@ export default function Home() {
         apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
       });
 
-      // Handle response based on Vercel AI SDK version
-      const text = response.text || response.choices?.[0]?.text || '';
+      const text = response.text || '';
       if (!text) throw new Error('No content generated');
       setMagazineContent(text);
 
