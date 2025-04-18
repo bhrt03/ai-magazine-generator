@@ -1,13 +1,14 @@
-// Add this at the top of your file
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Head from 'next/head';
+import { toPng } from 'html-to-image';
+import { PDFDocument, rgb } from 'pdf-lib';
 
 export default function Home() {
   const [topic, setTopic] = useState('');
-  const [magazineContent, setMagazineContent] = useState('');
+  const [magazine, setMagazine] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
-  const [error, setError] = useState(''); // New error state
+  const [error, setError] = useState('');
+  const magazineRef = useRef();
 
   const generateMagazine = async () => {
     if (!topic.trim()) {
@@ -17,32 +18,61 @@ export default function Home() {
 
     setLoading(true);
     setError('');
-    
+
     try {
-      // Generate Content
+      // Get content
       const contentRes = await fetch('/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic })
       });
-
-      if (!contentRes.ok) throw new Error('Content generation failed');
+      if (!contentRes.ok) throw new Error('Failed to generate content');
       const { content } = await contentRes.json();
 
-      // Get Image
-      const imageRes = await fetch(`/api/get-image?query=${encodeURIComponent(topic)}`);
-      if (!imageRes.ok) throw new Error('Image search failed');
-      const { imageUrl } = await imageRes.json();
+      // Get images
+      const imagesRes = await fetch(`/api/get-image?query=${encodeURIComponent(topic)}`);
+      if (!imagesRes.ok) throw new Error('Failed to get images');
+      const { images } = await imagesRes.json();
 
-      // Update state
-      setMagazineContent(content);
-      setImageUrl(imageUrl || '/placeholder.jpg');
+      setMagazine({ content, images });
 
     } catch (err) {
       setError(err.message);
-      console.error("Generation error:", err);
+      console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadPDF = async () => {
+    if (!magazineRef.current) return;
+    
+    try {
+      // Convert to image
+      const dataUrl = await toPng(magazineRef.current);
+      
+      // Create PDF
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([600, 800]);
+      const pngImage = await pdfDoc.embedPng(dataUrl);
+      page.drawImage(pngImage, {
+        x: 50,
+        y: 50,
+        width: 500,
+        height: 700,
+      });
+      
+      // Download
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${topic}-magazine.pdf`;
+      link.click();
+      
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      setError('Failed to generate PDF');
     }
   };
 
@@ -51,39 +81,82 @@ export default function Home() {
       <Head>
         <title>AI Magazine Generator</title>
       </Head>
+      
       <main>
         <h1>AI Magazine Generator</h1>
-        <input
-          type="text"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="Enter a topic"
-          disabled={loading}
-        />
-        <button 
-          onClick={generateMagazine} 
-          disabled={loading || !topic.trim()}
-        >
-          {loading ? 'Generating...' : 'Generate Magazine'}
-        </button>
         
-        {error && <p className="error" style={{ color: 'red' }}>{error}</p>}
-        
-        {imageUrl && (
-          <img 
-            src={imageUrl} 
-            alt={topic} 
-            style={{ maxWidth: '100%', marginTop: '20px' }}
+        <div className="controls">
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Enter magazine topic"
+            disabled={loading}
           />
-        )}
-        
-        {magazineContent && (
-          <div style={{ marginTop: '20px' }}>
-            <h2>{topic}</h2>
-            <p>{magazineContent}</p>
+          <button onClick={generateMagazine} disabled={loading}>
+            {loading ? 'Generating...' : 'Generate Magazine'}
+          </button>
+        </div>
+
+        {error && <p className="error">{error}</p>}
+
+        {magazine && (
+          <div className="magazine-container">
+            <div className="magazine" ref={magazineRef}>
+              <h2>{topic} Magazine</h2>
+              <div className="image-grid">
+                {magazine.images.map((img, i) => (
+                  <img key={i} src={img.url} alt={img.alt} />
+                ))}
+              </div>
+              <div className="content">
+                {magazine.content.split('\n').map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+              </div>
+              <footer>Generated by AI Magazine Creator</footer>
+            </div>
+            
+            <button onClick={downloadPDF} className="download-btn">
+              Download PDF
+            </button>
           </div>
         )}
       </main>
+
+      <style jsx>{`
+        .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        .controls { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        input { flex: 1; padding: 0.5rem; }
+        button { padding: 0.5rem 1rem; cursor: pointer; }
+        .error { color: red; }
+        .magazine {
+          background: white;
+          padding: 2rem;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          margin-top: 2rem;
+        }
+        .image-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
+          margin: 2rem 0;
+        }
+        .image-grid img {
+          width: 100%;
+          height: 200px;
+          object-fit: cover;
+        }
+        .content { line-height: 1.6; }
+        footer { margin-top: 2rem; text-align: center; }
+        .download-btn {
+          display: block;
+          margin: 2rem auto 0;
+          background: #4CAF50;
+          color: white;
+          border: none;
+        }
+      `}</style>
     </div>
   );
 }
