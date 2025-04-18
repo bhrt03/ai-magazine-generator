@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "html-to-image": "^1.11.11",
+    "pdf-lib": "^1.17.1",
     "openai": "^4.0.0",
     "pexels": "^1.4.0",
     "ai": "^2.2.0",
