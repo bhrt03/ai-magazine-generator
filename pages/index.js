@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { OpenAI } from 'openai'; // Correct OpenAI import
 import Head from 'next/head';
 
 export default function Home() {
@@ -12,44 +11,29 @@ export default function Home() {
     setLoading(true);
     
     try {
-      // Initialize OpenAI
-      const openai = new OpenAI({
-        apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY, // Ensure this is set in Vercel env
+      // Step 1: Generate content via Next.js API route
+      const contentRes = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic })
       });
-
-      // Generate content using OpenAI
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are a creative magazine writer." },
-          { role: "user", content: `Write a short magazine article about ${topic}` },
-        ],
-      });
-
-      const content = response.choices[0].message.content;
+      const { content } = await contentRes.json();
       setMagazineContent(content);
 
-      // Fetch image from Pexels (replace with your Pexels API key)
-      const pexelsResponse = await fetch(
-        `https://api.pexels.com/v1/search?query=${topic}&per_page=1`,
-        {
-          headers: {
-            Authorization: process.env.NEXT_PUBLIC_PEXELS_API_KEY,
-          },
-        }
-      );
-      const pexelsData = await pexelsResponse.json();
-      setImageUrl(pexelsData.photos[0]?.src.medium || '');
+      // Step 2: Fetch image from Pexels
+      const imageRes = await fetch(`/api/get-image?query=${encodeURIComponent(topic)}`);
+      const { imageUrl } = await imageRes.json();
+      setImageUrl(imageUrl);
 
     } catch (error) {
-      console.error("Error generating magazine:", error);
+      console.error("Generation failed:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
+    <div className="container">
       <Head>
         <title>AI Magazine Generator</title>
       </Head>
@@ -62,13 +46,13 @@ export default function Home() {
           placeholder="Enter a topic"
         />
         <button onClick={generateMagazine} disabled={loading}>
-          {loading ? 'Generating...' : 'Generate Magazine'}
+          {loading ? 'Generating...' : 'Create Magazine'}
         </button>
         
-        {imageUrl && <img src={imageUrl} alt={topic} />}
+        {imageUrl && <img src={imageUrl} alt={topic} style={{ maxWidth: '100%' }} />}
         {magazineContent && (
-          <div>
-            <h2>Your AI-Generated Magazine:</h2>
+          <div className="magazine-content">
+            <h2>{topic}</h2>
             <p>{magazineContent}</p>
           </div>
         )}
