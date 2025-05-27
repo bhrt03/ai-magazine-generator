@@ -1,39 +1,48 @@
-// pages/api/generateContent.js
-import { Configuration, OpenAIApi } from "openai";
-
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   const { prompt } = req.body;
 
-  if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+  if (!prompt) {
+    return res.status(400).json({ error: "Prompt is required" });
+  }
 
   try {
-    const response = await openai.createChatCompletion({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a magazine writer. Write an editorial-style article based on the user prompt. Make it engaging and structured like a real magazine article, with a headline, subheadings, and conclusion.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.8,
-      max_tokens: 1500,
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a professional magazine content writer. Write content in an engaging, informative, and magazine-style tone. Format it with sections, subheadings, and flow like a print magazine article.",
+          },
+          {
+            role: "user",
+            content: `Write a magazine-style article on: ${prompt}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      }),
     });
 
-    const article = response.data.choices[0].message.content;
+    const data = await response.json();
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      return res.status(500).json({ error: "Invalid response from OpenAI" });
+    }
+
+    const article = data.choices[0].message.content;
     res.status(200).json({ article });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error generating content" });
   }
 }
