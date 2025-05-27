@@ -1,45 +1,39 @@
-import { OpenAI } from 'openai';
+// pages/api/generateContent.js
+import { Configuration, OpenAIApi } from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
 });
+const openai = new OpenAIApi(configuration);
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== "POST") return res.status(405).end();
+
+  const { prompt } = req.body;
+
+  if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
   try {
-    const { topic } = req.body;
-    if (!topic) {
-      return res.status(400).json({ error: 'Topic is required' });
-    }
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+    const response = await openai.createChatCompletion({
+      model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: "You are a professional magazine writer. Create a detailed 3-paragraph article with engaging content."
+          content:
+            "You are a magazine writer. Write an editorial-style article based on the user prompt. Make it engaging and structured like a real magazine article, with a headline, subheadings, and conclusion.",
         },
         {
           role: "user",
-          content: `Write a magazine article about: ${topic}`
-        }
+          content: prompt,
+        },
       ],
-      temperature: 0.7,
-      max_tokens: 1000
+      temperature: 0.8,
+      max_tokens: 1500,
     });
 
-    res.status(200).json({
-      content: completion.choices[0]?.message?.content || "No content was generated"
-    });
-
+    const article = response.data.choices[0].message.content;
+    res.status(200).json({ article });
   } catch (error) {
-    console.error('OpenAI Error:', error);
-    res.status(500).json({
-      error: 'Failed to generate content',
-      details: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 }
