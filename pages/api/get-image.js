@@ -6,15 +6,19 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   const { prompt } = req.body;
 
-  if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+  if (!prompt) {
+    return res.status(400).json({ error: "Prompt is required" });
+  }
 
   try {
     const response = await openai.createImage({
-      prompt,
+      prompt: `Magazine cover image: ${prompt}`,
       n: 1,
       size: "1024x1024",
       response_format: "url",
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
     const imageUrl = response.data.data[0].url;
     res.status(200).json({ imageUrl });
   } catch (error) {
-    console.error("Image generation error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Image generation error:", error.message);
+    res.status(500).json({ error: "Failed to generate image" });
   }
 }
