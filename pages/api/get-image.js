@@ -1,10 +1,3 @@
-import { Configuration, OpenAIApi } from "openai";
-
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -17,17 +10,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await openai.createImage({
-      prompt: `Magazine cover image: ${prompt}`,
-      n: 1,
-      size: "1024x1024",
-      response_format: "url",
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        prompt: `A magazine-style cover image for: ${prompt}`,
+        n: 1,
+        size: "1024x1024",
+      }),
     });
 
-    const imageUrl = response.data.data[0].url;
+    const data = await response.json();
+
+    if (!data.data || !data.data[0].url) {
+      return res.status(500).json({ error: "Image generation failed" });
+    }
+
+    const imageUrl = data.data[0].url;
     res.status(200).json({ imageUrl });
   } catch (error) {
-    console.error("Image generation error:", error.message);
-    res.status(500).json({ error: "Failed to generate image" });
+    res.status(500).json({ error: "Error generating image" });
   }
 }
