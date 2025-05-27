@@ -1,4 +1,3 @@
-// pages/api/generateImage.js
 import { Configuration, OpenAIApi } from "openai";
 
 const configuration = new Configuration({
@@ -24,6 +23,7 @@ export default async function handler(req, res) {
     const imageUrl = response.data.data[0].url;
     res.status(200).json({ imageUrl });
   } catch (error) {
+    console.error("Image generation error:", error);
     res.status(500).json({ error: error.message });
   }
 }
