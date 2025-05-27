@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-white text-gray-800 font-sans;
+}
+
+h1, h2, h3 {
+  @apply font-bold text-gray-900;
+}
+
+article {
+  @apply space-y-4 leading-relaxed;
+}
