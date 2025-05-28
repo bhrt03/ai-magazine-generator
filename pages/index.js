@@ -2,98 +2,118 @@ import { useState } from 'react';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
+  const [content, setContent] = useState('');
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [pdfBlob, setPdfBlob] = useState(null);
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  const generateMagazine = async () => {
     setLoading(true);
-    setPdfBlob(null);
+    setContent('');
+    setImages([]);
 
     try {
-      const contentRes = await fetch('/api/generate-content', {
+      const res = await fetch('/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
-      const contentData = await contentRes.json();
 
-      const imageRes = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-      const imageData = await imageRes.json();
-
-      const pdfRes = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          content: contentData.content,
-          imageUrl: imageData.imageUrl,
-        }),
-      });
-
-      const blob = await pdfRes.blob();
-      setPdfBlob(blob);
-    } catch (err) {
-      console.error('Error generating magazine:', err);
+      if (!res.ok) throw new Error('Failed to generate content');
+      const data = await res.json();
+      setContent(data.content);
+      setImages(data.images);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
+  const downloadPDF = async () => {
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            img { width: 100%; margin-bottom: 20px; border-radius: 8px; }
+            h1, h2 { color: #333; }
+            p { font-size: 16px; line-height: 1.6; }
+          </style>
+        </head>
+        <body>
+          ${images.map(src => `<img src="${src}" />`).join('')}
+          <div>${content.replace(/\n/g, '<br/>')}</div>
+        </body>
+      </html>
+    `;
+
+    try {
+      const res = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html }),
+      });
+
+      if (!res.ok) throw new Error('Failed to generate PDF');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'magazine.pdf';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('PDF download failed:', error);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
-      <h1 className="text-3xl font-bold mb-6 text-center">AI Magazine Generator</h1>
-
-      <textarea
-        className="w-full max-w-xl p-4 rounded border border-gray-300 focus:outline-none focus:ring focus:border-blue-500"
-        rows={4}
-        placeholder="Enter your magazine topic..."
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-      />
-
-      <button
-        onClick={handleGenerate}
-        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        disabled={loading}
-      >
-        Generate Magazine
-      </button>
+    <div className="min-h-screen bg-gray-100 py-10 px-4">
+      <h1 className="text-3xl font-bold text-center mb-6">AI Magazine Generator</h1>
+      <div className="max-w-xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <input
+          type="text"
+          placeholder="Enter a topic..."
+          className="w-full border px-4 py-2 rounded mb-4"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+        />
+        <div className="flex gap-4">
+          <button
+            onClick={generateMagazine}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Generate Magazine
+          </button>
+          <button
+            onClick={downloadPDF}
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Download PDF
+          </button>
+        </div>
+      </div>
 
       {loading && (
-        <div className="text-center mt-6">
-          <svg className="animate-spin h-8 w-8 text-blue-600 mx-auto" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-              fill="none"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8z"
-            />
-          </svg>
-          <p className="text-sm text-gray-600 mt-2">Generating magazine...</p>
-        </div>
+        <div className="text-center mt-6 text-lg text-gray-600">Generating...</div>
       )}
 
-      {pdfBlob && (
-        <a
-          href={URL.createObjectURL(pdfBlob)}
-          download="magazine.pdf"
-          className="mt-6 inline-block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          Download Magazine PDF
-        </a>
+      {!loading && (content || images.length > 0) && (
+        <div className="max-w-3xl mx-auto mt-10 bg-white p-6 rounded-lg shadow-md">
+          {images.map((src, index) => (
+            <img
+              key={index}
+              src={src}
+              alt={`Generated ${index}`}
+              className="mb-4 rounded"
+            />
+          ))}
+          <div
+            className="prose"
+            dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br/>') }}
+          />
+        </div>
       )}
     </div>
   );
