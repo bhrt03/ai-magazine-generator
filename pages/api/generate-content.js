@@ -13,20 +13,17 @@ export default async function handler(req, res) {
     const content = `
       <h1>${prompt}</h1>
       <p>
-        Welcome to our AI-generated magazine feature on <strong>${prompt}</strong>.
-        This article explores key insights, trends, and exciting developments on this topic.
-        Stay engaged as we take you through a vivid magazine-style journey.
+        Welcome to our AI-generated magazine on <strong>${prompt}</strong>. This article dives into trends, facts, and highlights about the topic. Enjoy a magazine-style layout with text and visuals.
       </p>
       <p>
-        This is a placeholder content block. You can integrate OpenAI API to generate dynamic content
-        for your magazine in production.
+        This content is static placeholder. To generate AI-based content, connect OpenAI’s API.
       </p>
     `;
 
     const images = [
-      'https://source.unsplash.com/800x400/?technology',
-      'https://source.unsplash.com/800x400/?innovation',
-      'https://source.unsplash.com/800x400/?future',
+      'https://images.unsplash.com/photo-1506765515384-028b60a970df?fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?fit=crop&w=800&q=80'
     ];
 
     res.status(200).json({ content, images });
