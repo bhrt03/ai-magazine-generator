@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer';
+import chrome from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -12,10 +13,15 @@ export default async function handler(req, res) {
   }
 
   try {
+    const executablePath = await chrome.executablePath;
+
     const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: chrome.args,
+      defaultViewport: chrome.defaultViewport,
+      executablePath,
+      headless: chrome.headless,
     });
+
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
