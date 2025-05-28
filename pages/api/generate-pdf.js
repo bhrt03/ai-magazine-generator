@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { html } = req.body;
@@ -14,11 +14,11 @@ export default async function handler(req, res) {
   try {
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -28,9 +28,9 @@ export default async function handler(req, res) {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=magazine.pdf');
-    res.status(200).send(pdfBuffer);
+    res.send(pdfBuffer);
   } catch (error) {
-    console.error('PDF generation failed:', error);
+    console.error('PDF generation error:', error);
     res.status(500).json({ error: 'Failed to generate PDF' });
   }
 }
