@@ -1,41 +1,37 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   const { prompt } = req.body;
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: 'Missing OpenAI API key' });
+  if (!prompt) {
+    return res.status(400).json({ error: 'Missing prompt' });
   }
 
   try {
-    const completionRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert magazine writer. Generate engaging, high-quality magazine-style content based on user prompts.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.8,
-        max_tokens: 1200,
-      }),
-    });
+    const content = `
+      <h1>${prompt}</h1>
+      <p>
+        Welcome to our AI-generated magazine feature on <strong>${prompt}</strong>.
+        This article explores key insights, trends, and exciting developments on this topic.
+        Stay engaged as we take you through a vivid magazine-style journey.
+      </p>
+      <p>
+        This is a placeholder content block. You can integrate OpenAI API to generate dynamic content
+        for your magazine in production.
+      </p>
+    `;
 
-    const completionData = await completionRes.json();
-    const content = completionData.choices?.[0]?.message?.content;
+    const images = [
+      'https://source.unsplash.com/800x400/?technology',
+      'https://source.unsplash.com/800x400/?innovation',
+      'https://source.unsplash.com/800x400/?future',
+    ];
 
-    return res.status(200).json({ content });
+    res.status(200).json({ content, images });
   } catch (error) {
-    return res.status(500).json({ error: 'Content generation failed.' });
+    console.error('Error generating content:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }
