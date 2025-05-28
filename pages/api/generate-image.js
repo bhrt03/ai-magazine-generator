@@ -1,37 +1,31 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== 'POST') return res.status(405).end();
 
   const { prompt } = req.body;
 
-  if (!prompt) {
-    return res.status(400).json({ error: "Prompt is required" });
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ error: 'Missing OpenAI API key' });
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
+    const imageRes = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        prompt: `A magazine-style cover image for: ${prompt}`,
+        prompt,
         n: 1,
-        size: "1024x1024",
+        size: '1024x1024',
       }),
     });
 
-    const data = await response.json();
+    const imageData = await imageRes.json();
+    const imageUrl = imageData.data?.[0]?.url;
 
-    if (!data.data || !data.data[0].url) {
-      return res.status(500).json({ error: "Image generation failed" });
-    }
-
-    const imageUrl = data.data[0].url;
-    res.status(200).json({ imageUrl });
+    return res.status(200).json({ imageUrl });
   } catch (error) {
-    res.status(500).json({ error: "Error generating image" });
+    return res.status(500).json({ error: 'Image generation failed.' });
   }
 }
