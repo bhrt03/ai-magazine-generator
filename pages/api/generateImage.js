@@ -1,23 +1,17 @@
-// pages/api/generate-image.js
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const { prompt } = req.body;
+
   try {
-    const { prompt } = req.body;
-
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-
-    const response = await fetch("https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image", {
-      method: "POST",
+    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
         Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify({
         text_prompts: [{ text: prompt }],
@@ -29,23 +23,16 @@ export default async function handler(req, res) {
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Image generation failed:', error);
+    const data = await response.json();
+
+    const image = data?.artifacts?.[0]?.base64;
+
+    if (!image) {
       return res.status(500).json({ error: 'Image generation failed' });
     }
 
-    const data = await response.json();
-
-    const image = data.artifacts?.[0]?.base64;
-    if (!image) {
-      console.error('No image found in response', data);
-      return res.status(500).json({ error: 'No image returned from API' });
-    }
-
     res.status(200).json({ image });
-  } catch (err) {
-    console.error('Unexpected error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
