@@ -1,48 +1,46 @@
+// pages/api/generate-image.js
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method Not Allowed' });
-    return;
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { prompt } = req.body;
-  const API_KEY = process.env.GEMINI_API_KEY;
-
-  if (!API_KEY) {
-    res.status(500).json({ error: 'Missing Gemini API key' });
-    return;
-  }
 
   if (!prompt) {
-    res.status(400).json({ error: 'Prompt is required' });
-    return;
+    return res.status(400).json({ error: 'Prompt is required' });
   }
 
+  const API_KEY = process.env.STABILITY_API_KEY;
+
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: `Generate an image based on: ${prompt}` }],
-            },
-          ],
-        }),
-      }
-    );
+    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-v1-5/text-to-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        text_prompts: [{ text: prompt }],
+        cfg_scale: 7,
+        height: 512,
+        width: 512,
+        samples: 1,
+        steps: 30
+      })
+    });
 
     const data = await response.json();
 
-    if (!data.candidates || !data.candidates[0].content.parts[0].text) {
-      res.status(500).json({ error: 'No image generated' });
-      return;
+    if (data.artifacts && data.artifacts[0]?.base64) {
+      const imageBase64 = data.artifacts[0].base64;
+      return res.status(200).json({ image: `data:image/png;base64,${imageBase64}` });
+    } else {
+      return res.status(500).json({ error: 'Image generation failed' });
     }
 
-    const imageUrl = data.candidates[0].content.parts[0].text;
-    res.status(200).json({ imageUrl });
   } catch (error) {
-    res.status(500).json({ error: 'Image generation failed' });
+    console.error(error);
+    return res.status(500).json({ error: 'Something went wrong' });
   }
 }
