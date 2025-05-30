@@ -12,7 +12,7 @@ export default function Home() {
     setImage('');
 
     try {
-      const contentRes = await fetch('/api/generate-content', {
+      const contentRes = await fetch('/api/generateContent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
@@ -21,7 +21,7 @@ export default function Home() {
       const contentData = await contentRes.json();
       setArticle(contentData.content || 'Content generation failed.');
 
-      const imageRes = await fetch('/api/generate-image', {
+      const imageRes = await fetch('/api/generateImage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: query }),
