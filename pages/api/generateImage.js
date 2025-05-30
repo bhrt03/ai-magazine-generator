@@ -1,35 +1,48 @@
-// pages/api/generateImage.js
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
   }
 
   const { prompt } = req.body;
+  const API_KEY = process.env.GEMINI_API_KEY;
+
+  if (!API_KEY) {
+    res.status(500).json({ error: 'Missing Gemini API key' });
+    return;
+  }
 
   if (!prompt) {
-    return res.status(400).json({ error: 'Prompt is required' });
+    res.status(400).json({ error: 'Prompt is required' });
+    return;
   }
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: `Generate an image based on: ${prompt}` }],
+            },
+          ],
+        }),
+      }
+    );
 
-  const response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=' + GEMINI_API_KEY,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `Generate an image related to: ${prompt}` }] }]
-      })
+    const data = await response.json();
+
+    if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+      res.status(500).json({ error: 'No image generated' });
+      return;
     }
-  );
 
-  const data = await response.json();
-  const imageURL = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-
-  if (!imageURL) {
-    return res.status(500).json({ error: 'Image generation failed' });
+    const imageUrl = data.candidates[0].content.parts[0].text;
+    res.status(200).json({ imageUrl });
+  } catch (error) {
+    res.status(500).json({ error: 'Image generation failed' });
   }
-
-  res.status(200).json({ image: `data:image/png;base64,${imageURL}` });
 }
