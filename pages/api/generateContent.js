@@ -1,14 +1,14 @@
 // pages/api/generateContent.js
+import { GoogleGenerativeAI } from '@google/generative-ai'; // <-- ADD THIS IMPORT
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // --- FIX: Expect 'query' from frontend's req.body ---
   const { query } = req.body;
 
-  if (!query || query.trim() === '') { // Also check for empty string after trim
+  if (!query || query.trim() === '') {
     console.error("Backend: Query is empty/null/undefined, returning 400.");
     return res.status(400).json({ error: 'Query for content is required.' });
   }
@@ -21,50 +21,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: query }] }], // Use 'query' here
-        }),
-      }
-    );
+    // --- Initialize the Google Generative AI client ---
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    // Use the correct model name as per SDK usage (often just 'gemini-pro')
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" }); // <-- Use 'gemini-pro' here directly
 
-    if (!geminiRes.ok) {
-      const errorData = await geminiRes.json().catch(() => ({ message: geminiRes.statusText || 'Unknown API Error' }));
-      console.error(`Gemini API Error (${geminiRes.status} ${geminiRes.statusText}):`, errorData);
+    // --- Generate content using the SDK ---
+    const result = await model.generateContent(query);
+    const response = await result.response;
+    const generatedText = response.text(); // SDK provides a .text() method
 
-      // More specific error messages for the client
-      if (geminiRes.status === 400 && errorData.error && errorData.error.message.includes("not found")) {
-        return res.status(500).json({ error: "Gemini model ('gemini-pro') not found or invalid. Check model name and API version." });
-      } else if (geminiRes.status === 401 || geminiRes.status === 403) {
-        return res.status(500).json({ error: "Gemini API key invalid or unauthorized. Check Vercel environment variables." });
-      } else if (geminiRes.status === 429) {
-        return res.status(429).json({ error: "Gemini API rate limit exceeded. Please try again shortly." });
-      } else {
-        return res.status(500).json({ error: `Failed to generate content from Gemini API: ${errorData.error?.message || errorData.message}` });
-      }
-    }
-
-    const data = await geminiRes.json();
-    console.log("Gemini API Full Response Data:", JSON.stringify(data, null, 2));
-
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    console.log("Gemini API Full Response Data (via SDK):", JSON.stringify(response.candidates, null, 2));
 
     if (!generatedText) {
-      console.error("Gemini API did not return expected content or returned empty response:", data);
-      if (data.error) {
-        return res.status(500).json({ error: `Gemini API returned an internal error: ${data.error.message}` });
-      }
+      console.error("Gemini API did not return expected content or returned empty response:", response);
       return res.status(500).json({ error: "Empty or malformed content response from Gemini API." });
     }
 
-    // --- FIX: Send 'text' property, as frontend expects 'contentData.text' ---
     res.status(200).json({ text: generatedText });
+
   } catch (e) {
-    console.error("Content generation error:", e);
+    // The SDK might throw more detailed errors.
+    console.error("Content generation error (via SDK):", e);
+    // Check for specific SDK error messages if needed, e.g., for API key issues
+    if (e.message && e.message.includes('API key not valid')) {
+        return res.status(500).json({ error: "Gemini API key invalid or unauthorized. Check Vercel environment variables." });
+    } else if (e.message && e.message.includes('rate limit')) {
+        return res.status(429).json({ error: "Gemini API rate limit exceeded. Please try again shortly." });
+    }
     res.status(500).json({ error: "Failed to generate content due to a server error." });
   }
 }
