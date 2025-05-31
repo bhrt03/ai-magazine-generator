@@ -54,16 +54,17 @@ export default async function handler(req, res) {
     res.status(500).json({ error: errorMessage });
   }
 }*/
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+import { useState, useEffect } from 'react';
 
-  const { query } = req.body;
+export default function Home() {
+  const [query, setQuery] = useState('');
+  const [content, setContent] = useState('');
+  const [displayedContent, setDisplayedContent] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  if (query === 'Future of Education') {
-    const article = `
-      The Future of Education
+  const article = "The Future of Education
 
       The future of education is undergoing a transformative shift, fueled by rapid technological advancements,
       changing workforce demands, and an increasing emphasis on personalized and lifelong learning. 
@@ -97,12 +98,91 @@ export default async function handler(req, res) {
 
       In conclusion, the future of education will be more accessible, equitable, and dynamic than ever before.
       It will empower learners to take control of their educational journeys, equip them with skills for the 
-      21st century, and foster a global community of curious, capable, and compassionate individuals.
-    `;
-    return res.status(200).json({ text: article });
-  } else {
-    return res.status(200).json({ text: 'Content generation failed.' });
-  }
+      21st century, and foster a global community of curious, capable, and compassionate individuals."
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError('');
+    setContent('');
+    setDisplayedContent('');
+    setImageUrl('');
+
+    if (query.trim().toLowerCase() === 'future of education') {
+      setImageUrl('https://images.unsplash.com/photo-1601933470928-c04dbf18a80a');
+      setContent(article);
+    } else {
+      setError('Content generation failed.');
+    }
+
+    setLoading(false);
+  };
+
+  // Typing animation
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      if (content && i <= content.length) {
+        setDisplayedContent(content.slice(0, i));
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 15);
+    return () => clearInterval(interval);
+  }, [content]);
+
+  return (
+    <main className="min-h-screen p-8 bg-gray-100">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <h1 className="text-4xl font-bold text-center">AI Magazine Generator</h1>
+
+        <input
+          type="text"
+          placeholder="Enter a topic..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full p-4 rounded-lg border border-gray-300"
+        />
+
+        <button
+          onClick={handleGenerate}
+          className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800"
+          disabled={loading}
+        >
+          {loading ? 'Generating...' : 'Generate'}
+        </button>
+
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt="Generated"
+            className="w-full rounded-xl shadow-lg animate-fade-in"
+          />
+        )}
+
+        {displayedContent && (
+          <div className="bg-white p-6 rounded-xl shadow-md whitespace-pre-wrap font-serif animate-fade-in">
+            {displayedContent}
+          </div>
+        )}
+
+        {error && (
+          <div className="text-red-600 text-center">{error}</div>
+        )}
+      </div>
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 1s ease-out forwards;
+        }
+      `}</style>
+    </main>
+  );
 }
+
 
 
