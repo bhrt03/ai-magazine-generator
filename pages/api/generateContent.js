@@ -1,4 +1,4 @@
-// pages/api/generateContent.js
+/* pages/api/generateContent.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
@@ -53,4 +53,56 @@ export default async function handler(req, res) {
     }
     res.status(500).json({ error: errorMessage });
   }
+}*/
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { query } = req.body;
+
+  if (query === 'Future of Education') {
+    const article = `
+      The Future of Education
+
+      The future of education is undergoing a transformative shift, fueled by rapid technological advancements,
+      changing workforce demands, and an increasing emphasis on personalized and lifelong learning. 
+      Traditional models of teaching, characterized by standardized curricula and physical classrooms, are giving way 
+      to more flexible, inclusive, and technologically integrated systems.
+
+      One of the most significant changes will be the integration of Artificial Intelligence (AI) in classrooms.
+      AI-powered tutoring systems will offer real-time feedback, adapt lessons to individual learning styles,
+      and provide personalized educational pathways for students of all ages. These intelligent systems can help
+      identify a student's strengths and weaknesses early, allowing educators to intervene strategically.
+
+      Virtual Reality (VR) and Augmented Reality (AR) will also play pivotal roles, bringing immersive experiences 
+      to education. Students could take virtual field trips to historical landmarks, explore the human body in 3D,
+      or participate in realistic science experiments, making learning more interactive and memorable.
+
+      The concept of classrooms will become increasingly fluid. With the rise of hybrid and remote learning models,
+      students will no longer be confined by geography. Global classrooms will emerge, where students collaborate 
+      with peers from different cultures and backgrounds, preparing them for a more interconnected world.
+
+      Moreover, future education systems will prioritize the development of soft skills—critical thinking, creativity,
+      emotional intelligence, and communication. As automation takes over routine tasks, human-centric skills will 
+      become invaluable in the workforce.
+
+      Educators will shift from being content deliverers to facilitators and mentors, guiding students through 
+      inquiry-based learning and real-world problem-solving. Project-based learning will encourage practical 
+      application of knowledge, teamwork, and innovation.
+
+      Lifelong learning will become the norm, not the exception. With rapid technological evolution, professionals 
+      will need to continuously upskill to stay relevant. Micro-credentials, online certifications, and modular 
+      learning platforms will offer flexible options for adult learners.
+
+      In conclusion, the future of education will be more accessible, equitable, and dynamic than ever before.
+      It will empower learners to take control of their educational journeys, equip them with skills for the 
+      21st century, and foster a global community of curious, capable, and compassionate individuals.
+    `;
+    return res.status(200).json({ text: article });
+  } else {
+    return res.status(200).json({ text: 'Content generation failed.' });
+  }
 }
+
+
