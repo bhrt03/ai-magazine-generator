@@ -1,82 +1,75 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 export default function Home() {
-  const [query, setQuery] = useState('');
-  const [article, setArticle] = useState('');
-  const [image, setImage] = useState('');
+  const [query, setQuery] = useState("");
+  const [content, setContent] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
     setLoading(true);
-    setArticle('');
-    setImage('');
+    setContent("");
+    setImageUrl("");
 
     try {
-      const contentRes = await fetch('/api/generateContent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const contentRes = await fetch("/api/generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
       });
 
       const contentData = await contentRes.json();
-      setArticle(contentData.content || 'Content generation failed.');
+      setContent(contentData.text || "Content generation failed.");
+    } catch {
+      setContent("Content generation failed.");
+    }
 
-      const imageRes = await fetch('/api/generateImage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+    try {
+      const imageRes = await fetch("/api/generateImage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: query }),
       });
 
       const imageData = await imageRes.json();
-      if (imageData.image) {
-        setImage(`data:image/png;base64,${imageData.image}`);
-      } else {
-        setImage('');
-      }
-    } catch (error) {
-      setArticle('Something went wrong.');
-      setImage('');
+      setImageUrl(imageData.imageUrl || "");
+    } catch {
+      setImageUrl("");
     }
 
     setLoading(false);
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif' }}>
-      <h1>AI Magazine Generator</h1>
+    <div className="min-h-screen p-6 bg-gray-100 flex flex-col items-center">
+      <h1 className="text-3xl font-bold mb-4">AI Magazine Generator</h1>
       <input
         type="text"
-        placeholder="Enter a topic"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
+        placeholder="Enter a topic..."
+        className="border border-gray-300 p-2 rounded w-full max-w-xl mb-4"
       />
       <button
         onClick={handleGenerate}
-        style={{
-          marginTop: '1rem',
-          padding: '0.5rem 1rem',
-          fontSize: '1rem',
-          cursor: 'pointer',
-        }}
+        className="bg-blue-500 text-white px-4 py-2 rounded mb-6 disabled:opacity-50"
         disabled={loading}
       >
-        {loading ? 'Generating...' : 'Generate'}
+        {loading ? "Generating..." : "Generate"}
       </button>
 
-      {article && (
-        <div style={{ marginTop: '2rem' }}>
-          <h2>Generated Article</h2>
-          <p>{article}</p>
-        </div>
-      )}
-
-      {image && (
-        <div style={{ marginTop: '2rem' }}>
-          <h2>Generated Image</h2>
-          <img src={image} alt="Generated" style={{ maxWidth: '100%' }} />
-        </div>
-      )}
+      <div className="w-full max-w-4xl space-y-8">
+        {content && (
+          <div className="bg-white p-4 rounded shadow text-gray-800 whitespace-pre-wrap">
+            {content}
+          </div>
+        )}
+        {imageUrl && (
+          <div className="w-full flex justify-center">
+            <img src={imageUrl} alt="Generated" className="rounded-lg max-w-full" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
