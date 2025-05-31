@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     res.status(500).json({ error: errorMessage });
   }
 }*/
-import { useState, useEffect } from 'react';
+/*import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [query, setQuery] = useState('');
@@ -182,7 +182,49 @@ export default function Home() {
       `}</style>
     </main>
   );
+}*/
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { query } = req.body;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'Invalid query' });
+    }
+
+    if (query.trim().toLowerCase() === 'future of education') {
+      const article = `The Future of Education
+
+Education is undergoing a transformative shift, shaped by rapid technological advancements, evolving pedagogies, and the increasing demand for personalized and lifelong learning. Traditional classrooms are being supplemented—and in some cases replaced—by digital ecosystems that facilitate remote, hybrid, and on-demand education.
+
+Artificial Intelligence (AI) plays a central role in this revolution. Intelligent tutoring systems are now capable of assessing a learner’s progress in real-time, adapting content and pacing to suit their individual needs. Algorithms analyze learning patterns to identify strengths, weaknesses, and preferred learning styles, making education more inclusive and accessible.
+
+Virtual and Augmented Reality (VR/AR) are changing the way students experience information. Imagine studying ancient Rome by virtually walking through its streets or learning human anatomy by interacting with a 3D model. These immersive tools make complex concepts tangible and improve retention rates significantly.
+
+The rise of microlearning and modular education allows learners to acquire specific skills quickly through short, focused content, which is ideal for the fast-paced digital world. Credentials are also evolving—digital badges, nano degrees, and skill-based certifications are increasingly being valued alongside traditional diplomas.
+
+Furthermore, blockchain technology is enabling secure and verifiable academic records, giving learners ownership of their achievements and easing the verification process for employers and institutions.
+
+Another key shift is the focus on soft skills. As automation takes over repetitive tasks, qualities like creativity, emotional intelligence, critical thinking, and adaptability are becoming core learning goals. Educational institutions are reimagining their curricula to prepare students not just for jobs, but for solving real-world problems.
+
+Global access to quality education is also improving. With the internet, high-quality content can be disseminated across borders, giving students in remote or underserved regions the same opportunities as those in metropolitan centers. Open-source platforms, free online courses, and AI-driven translation tools are bridging the global education gap.
+
+In summary, the future of education is flexible, immersive, data-driven, and deeply personalized. It empowers individuals to become lifelong learners, capable of adapting in an ever-changing world. The role of educators will evolve from information providers to learning facilitators, guiding students on paths that are uniquely theirs.`;
+
+      return res.status(200).json({ content: article });
+    } else {
+      return res.status(200).json({ content: 'Content generation failed.' });
+    }
+  } catch (error) {
+    console.error('Content generation error:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
+
+
 
 
 
