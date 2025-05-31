@@ -7,34 +7,61 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-    setLoading(true);
-    setContent("");
-    setImageUrl("");
+    // --- Added check: Prevent API calls if query is empty ---
+    if (!query.trim()) { // .trim() ensures it's not just whitespace
+      alert("Please enter a topic to generate content.");
+      return;
+    }
 
+    setLoading(true);
+    setContent(""); // Clear previous content
+    setImageUrl(""); // Clear previous image
+
+    // --- Generate Article Content ---
     try {
+      console.log("Frontend: Sending query to /api/generateContent:", query);
       const contentRes = await fetch("/api/generateContent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query }), // Sending 'query' as per backend's expectation
       });
 
-      const contentData = await contentRes.json();
-      setContent(contentData.text || "Content generation failed.");
-    } catch {
-      setContent("Content generation failed.");
+      // Check if the response itself was OK (e.g., not 400, 500)
+      if (!contentRes.ok) {
+        const errorBody = await contentRes.json().catch(() => ({}));
+        console.error("Frontend: generateContent API responded with an error:", contentRes.status, contentRes.statusText, errorBody);
+        setContent(errorBody.error || "Content generation failed (server error).");
+      } else {
+        const contentData = await contentRes.json();
+        // Backend should send 'text', so setting 'text' here
+        setContent(contentData.text || "Content generation failed (no text in response).");
+      }
+    } catch (error) {
+      console.error("Frontend: Error calling generateContent API:", error);
+      setContent("Content generation failed (network or unexpected error).");
     }
 
+    // --- Generate Image ---
     try {
+      console.log("Frontend: Sending prompt for image to /api/generateImage:", query);
       const imageRes = await fetch("/api/generateImage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: query }),
+        body: JSON.stringify({ prompt: query }), // Sending 'prompt' for image, using 'query'
       });
 
-      const imageData = await imageRes.json();
-      setImageUrl(imageData.imageUrl || "");
-    } catch {
-      setImageUrl("");
+      if (!imageRes.ok) {
+        const errorBody = await imageRes.json().catch(() => ({}));
+        console.error("Frontend: generateImage API responded with an error:", imageRes.status, imageRes.statusText, errorBody);
+        setImageUrl(""); // Don't show broken image
+      } else {
+        const imageData = await imageRes.json();
+        // Backend should send 'imageUrl', setting 'imageUrl' here
+        setImageUrl(imageData.imageUrl || "");
+      }
+    } catch (error) {
+      console.error("Frontend: Error calling generateImage API:", error);
+      setImageUrl(""); // Don't show broken image
     }
 
     setLoading(false);
