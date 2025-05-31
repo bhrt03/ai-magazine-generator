@@ -19,33 +19,43 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-v1-5/text-to-image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
-      },
-      body: JSON.stringify({
-        text_prompts: [{ text: prompt }],
-        cfg_scale: 7,
-        height: 512,
-        width: 512,
-        samples: 1,
-        steps: 30
-      })
-    });
+    const response = await fetch(
+      // --- CHANGE THIS LINE: Use a current model ID ---
+      // Common choices: 'stable-diffusion-xl-1024-v1-0' (for SDXL), 'stable-diffusion-v1-6' (for SD 1.x)
+      // I recommend trying 'stable-diffusion-xl-1024-v1-0' for better quality.
+      `https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+          text_prompts: [{ text: prompt }],
+          cfg_scale: 7,
+          height: 1024, // Change height/width to match SDXL recommendations
+          width: 1024, // SDXL performs best at 1024x1024
+          samples: 1,
+          steps: 30
+        })
+      }
+    );
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || 'Unknown API Error' }));
         console.error(`Stability AI API Error (${response.status} ${response.statusText}):`, errorData);
 
+        let errorMessage = "Failed to generate image from Stability AI.";
         if (response.status === 401 || response.status === 403) {
-            return res.status(500).json({ error: "Stability AI API key invalid or unauthorized. Check Vercel environment variables." });
+            errorMessage = "Stability AI API key invalid or unauthorized. Check Vercel environment variables.";
+        } else if (response.status === 404 && errorData.message) {
+            errorMessage = `Stability AI model not found: ${errorData.message}`; // More specific message
         } else if (response.status === 429) {
-            return res.status(429).json({ error: "Stability AI API rate limit exceeded. Please try again shortly." });
-        } else {
-            return res.status(500).json({ error: `Failed to generate image from Stability AI: ${errorData.message || 'Unknown API Error'}` });
+            errorMessage = "Stability AI API rate limit exceeded. Please try again shortly.";
+        } else if (errorData.message) {
+             errorMessage = `Stability AI error: ${errorData.message}`;
         }
+        return res.status(500).json({ error: errorMessage });
     }
 
     const data = await response.json();
@@ -53,7 +63,6 @@ export default async function handler(req, res) {
 
     if (data.artifacts && data.artifacts[0]?.base64) {
       const imageBase64 = data.artifacts[0].base64;
-      // --- FIX: Send 'imageUrl' property, as frontend expects 'imageData.imageUrl' ---
       return res.status(200).json({ imageUrl: `data:image/png;base64,${imageBase64}` });
     } else {
       console.error("Stability AI response missing artifacts or malformed:", data);
