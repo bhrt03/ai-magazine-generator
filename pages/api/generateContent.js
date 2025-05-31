@@ -1,5 +1,5 @@
 // pages/api/generateContent.js
-import { GoogleGenerativeAI } from '@google/generative-ai'; // <-- ADD THIS IMPORT
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -21,15 +21,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // --- Initialize the Google Generative AI client ---
     const genAI = new GoogleGenerativeAI(API_KEY);
-    // Use the correct model name as per SDK usage (often just 'gemini-pro')
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" }); // <-- Use 'gemini-pro' here directly
+    // --- CHANGE THIS LINE: Use 'gemini-1.0-pro' ---
+    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
-    // --- Generate content using the SDK ---
     const result = await model.generateContent(query);
     const response = await result.response;
-    const generatedText = response.text(); // SDK provides a .text() method
+    const generatedText = response.text();
 
     console.log("Gemini API Full Response Data (via SDK):", JSON.stringify(response.candidates, null, 2));
 
@@ -41,14 +39,18 @@ export default async function handler(req, res) {
     res.status(200).json({ text: generatedText });
 
   } catch (e) {
-    // The SDK might throw more detailed errors.
     console.error("Content generation error (via SDK):", e);
-    // Check for specific SDK error messages if needed, e.g., for API key issues
-    if (e.message && e.message.includes('API key not valid')) {
-        return res.status(500).json({ error: "Gemini API key invalid or unauthorized. Check Vercel environment variables." });
-    } else if (e.message && e.message.includes('rate limit')) {
-        return res.status(429).json({ error: "Gemini API rate limit exceeded. Please try again shortly." });
+    // Improved error messages
+    let errorMessage = "Failed to generate content due to a server error.";
+    if (e.message) {
+      if (e.message.includes('API key not valid')) {
+          errorMessage = "Gemini API key invalid or unauthorized. Check Vercel environment variables.";
+      } else if (e.message.includes('rate limit')) {
+          errorMessage = "Gemini API rate limit exceeded. Please try again shortly.";
+      } else if (e.message.includes('not found') || e.message.includes('unsupported')) {
+          errorMessage = "Gemini model ('gemini-1.0-pro') not found or unsupported for this API version/method. Please check Google AI Studio.";
+      }
     }
-    res.status(500).json({ error: "Failed to generate content due to a server error." });
+    res.status(500).json({ error: errorMessage });
   }
 }
