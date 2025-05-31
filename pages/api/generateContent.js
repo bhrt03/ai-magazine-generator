@@ -17,9 +17,14 @@ export default async function handler(req, res) {
     );
 
     const data = await geminiRes.json();
+    console.log("Gemini API Response:", JSON.stringify(data)); // 👈 log full response
+
     const generated = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    if (!generated) throw new Error("Empty response");
+
     res.status(200).json({ text: generated });
   } catch (e) {
+    console.error("Content generation error:", e);
     res.status(500).json({ error: "Failed to generate content." });
   }
 }
