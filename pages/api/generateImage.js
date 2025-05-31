@@ -1,38 +1,32 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== "POST") return res.status(405).end();
 
   const { prompt } = req.body;
+  const API_KEY = process.env.STABILITY_API_KEY;
 
   try {
-    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image', {
-      method: 'POST',
+    const response = await fetch("https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image", {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
         text_prompts: [{ text: prompt }],
         cfg_scale: 7,
         height: 512,
         width: 512,
-        samples: 1,
         steps: 30,
       }),
     });
 
     const data = await response.json();
+    const base64 = data.artifacts?.[0]?.base64;
+    if (!base64) throw new Error("Image not generated");
 
-    const image = data?.artifacts?.[0]?.base64;
-
-    if (!image) {
-      return res.status(500).json({ error: 'Image generation failed' });
-    }
-
-    res.status(200).json({ image });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(200).json({ imageUrl: `data:image/png;base64,${base64}` });
+  } catch (e) {
+    res.status(500).json({ error: "Image generation failed" });
   }
 }
